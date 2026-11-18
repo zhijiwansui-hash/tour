@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>책탐정 코난</title>
+  <style>
+    :root {
+      --bg: #fff6e8;
+      --card: #fffdf8;
+      --brown: #6b4a35;
+      --peach: #ffb98a;
+      --peach-dark: #f4975c;
+      --mint: #cdeedd;
+      --line: #f1dfc6;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--brown);
+      font-family: "Jua", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif;
+      background-image:
+        radial-gradient(circle at 10% 10%, #ffe9c9 0 80px, transparent 81px),
+        radial-gradient(circle at 92% 18%, #dff4e8 0 70px, transparent 71px),
+        radial-gradient(circle at 85% 92%, #ffe0d1 0 90px, transparent 91px);
+      background-attachment: fixed;
+    }
+    .hidden { display: none !important; }
+    .wrap { max-width: 860px; margin: 0 auto; padding: 24px 18px 60px; }
+
+    .topbar { display: flex; justify-content: flex-end; }
+    .btn-guest, .btn-back {
+      border: 2px solid var(--peach-dark);
+      background: #fff;
+      color: var(--peach-dark);
+      border-radius: 999px;
+      padding: 8px 18px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .btn-guest:hover, .btn-back:hover { background: var(--peach); color: #fff; }
+
+    header { text-align: center; margin: 8px 0 26px; }
+    .logo { font-size: 54px; margin-bottom: 4px; }
+    h1 { margin: 0; font-size: 36px; letter-spacing: 1px; }
+    .sub { margin: 8px 0 0; font-size: 15px; opacity: .8; }
+
+    .search {
+      display: flex; gap: 10px;
+      background: var(--card);
+      border: 3px solid var(--line);
+      border-radius: 999px;
+      padding: 8px 8px 8px 22px;
+      box-shadow: 0 6px 0 var(--line);
+    }
+    .search input {
+      flex: 1; border: none; outline: none; background: transparent;
+      font-size: 18px; color: var(--brown); font-family: inherit; min-width: 0;
+    }
+    .search button {
+      border: none; background: var(--peach-dark); color: #fff;
+      border-radius: 999px; padding: 12px 26px; font-size: 17px;
+      font-weight: 700; cursor: pointer; font-family: inherit;
+    }
+    .search button:hover { background: #ea8545; }
+    .search button:disabled { opacity: .6; cursor: wait; }
+
+    #status { text-align: center; margin: 30px 0; font-size: 17px; min-height: 24px; }
+    #status.error { color: #c0492b; }
+
+    #results { display: grid; gap: 18px; }
+    .book {
+      display: flex; gap: 18px;
+      background: var(--card);
+      border: 3px solid var(--line);
+      border-radius: 22px;
+      padding: 16px;
+      box-shadow: 0 5px 0 var(--line);
+    }
+    .cover {
+      flex: 0 0 130px; height: 185px;
+      border-radius: 12px; overflow: hidden;
+      background: var(--mint);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 48px;
+      box-shadow: 3px 4px 0 rgba(107, 74, 53, .15);
+    }
+    .cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .info { flex: 1; min-width: 0; }
+    .info h3 { margin: 2px 0 8px; font-size: 21px; }
+    .meta { font-size: 14px; opacity: .85; margin-bottom: 4px; }
+    .meta b { color: var(--peach-dark); }
+    .summary { margin-top: 10px; font-size: 15px; line-height: 1.65; }
+
+    .guest-view { text-align: center; padding-top: 18vh; }
+    .guest-view .big { font-size: 64px; }
+    .guest-view p { font-size: 26px; margin: 10px 0 28px; }
+
+    @media (max-width: 560px) {
+      h1 { font-size: 29px; }
+      .book { flex-direction: column; align-items: center; text-align: center; }
+      .cover { flex-basis: auto; width: 140px; height: 200px; }
+    }
+  </style>
+</head>
+<body>
+  <!-- 메인 화면 -->
+  <div id="mainView" class="wrap">
+    <div class="topbar">
+      <button id="guestBtn" class="btn-guest" type="button">방명록</button>
+    </div>
+
+    <header>
+      <div class="logo">🔍📚</div>
+      <h1>책탐정 코난</h1>
+      <p class="sub">키워드 하나로 나에게 어울리는 그림책을 찾아드려요</p>
+    </header>
+
+    <form id="searchForm" class="search" autocomplete="off">
+      <input id="keyword" type="text" placeholder="예: 우정, 공룡, 잠자리, 용기" maxlength="50" required />
+      <button id="searchBtn" type="submit">검색</button>
+    </form>
+
+    <div id="status"></div>
+    <section id="results"></section>
+  </div>
+
+  <!-- 방명록 화면 -->
+  <div id="guestView" class="wrap guest-view hidden">
+    <div class="big">📖</div>
+    <p>준비 중</p>
+    <button id="backBtn" class="btn-back" type="button">← 돌아가기</button>
+  </div>
+
+  <script>
+    const mainView = document.getElementById("mainView");
+    const guestView = document.getElementById("guestView");
+    const form = document.getElementById("searchForm");
+    const input = document.getElementById("keyword");
+    const searchBtn = document.getElementById("searchBtn");
+    const statusEl = document.getElementById("status");
+    const resultsEl = document.getElementById("results");
+
+    // 화면 전환
+    document.getElementById("guestBtn").addEventListener("click", () => {
+      mainView.classList.add("hidden");
+      guestView.classList.remove("hidden");
+      window.scrollTo(0, 0);
+    });
+    document.getElementById("backBtn").addEventListener("click", () => {
+      guestView.classList.add("hidden");
+      mainView.classList.remove("hidden");
+    });
+
+    function setStatus(msg, isError) {
+      statusEl.textContent = msg || "";
+      statusEl.classList.toggle("error", !!isError);
+    }
+
+    function makeEl(tag, className, text) {
+      const el = document.createElement(tag);
+      if (className) el.className = className;
+      if (text !== undefined) el.textContent = text;
+      return el;
+    }
+
+    function renderBook(book) {
+      const card = makeEl("article", "book");
+
+      const cover = makeEl("div", "cover");
+      const showFallback = () => { cover.textContent = "📕"; };
+      if (book.cover && /^https?:\/\//i.test(book.cover)) {
+        const img = document.createElement("img");
+        img.alt = (book.title || "그림책") + " 표지";
+        img.loading = "lazy";
+        img.referrerPolicy = "no-referrer";
+        img.onerror = () => { cover.innerHTML = ""; showFallback(); };
+        img.src = book.cover;
+        cover.appendChild(img);
+      } else {
+        showFallback();
+      }
+
+      const info = makeEl("div", "info");
+      info.appendChild(makeEl("h3", "", book.title || "제목 없음"));
+
+      const author = makeEl("div", "meta");
+      author.appendChild(makeEl("b", "", "저자 "));
+      author.appendChild(document.createTextNode(book.author || "정보 없음"));
+      const publisher = makeEl("div", "meta");
+      publisher.appendChild(makeEl("b", "", "출판사 "));
+      publisher.appendChild(document.createTextNode(book.publisher || "정보 없음"));
+
+      info.appendChild(author);
+      info.appendChild(publisher);
+      info.appendChild(makeEl("p", "summary", book.summary || "줄거리 정보가 없어요."));
+
+      card.appendChild(cover);
+      card.appendChild(info);
+      return card;
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const keyword = input.value.trim();
+      if (!keyword) return;
+
+      resultsEl.innerHTML = "";
+      setStatus("🔎 코난이 그림책을 찾는 중이에요... (10~20초 걸릴 수 있어요)");
+      searchBtn.disabled = true;
+
+      try {
+        const res = await fetch("/api/generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ keyword })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || "검색 중 문제가 생겼어요.");
+
+        const books = Array.isArray(data.books) ? data.books : [];
+        if (books.length === 0) {
+          setStatus("앗, 관련 그림책을 찾지 못했어요. 다른 키워드로 다시 해볼까요?");
+          return;
+        }
+        setStatus("");
+        books.forEach((b) => resultsEl.appendChild(renderBook(b)));
+      } catch (err) {
+        setStatus("😢 " + err.message, true);
+      } finally {
+        searchBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
